@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLORA – IRRIGATION INTELLIGENTE</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EAF1EC;--surface:#FBFDFB;--sunk:#DDE8E1;--ink:#12261E;--mute:#5B7066;--line:#CBD9D0;
+  --water:#1B7FA6;--water-soft:#D3EAF3;--leaf:#2F8A4B;--leaf-soft:#D6EBDC;--warn:#B7791F;--warn-soft:#F6E8C9;--bad:#B93B3B;--bad-soft:#F6D9D6;
+  --side:#0F3D2E;--side2:#1A5641;--w:260px;
+  --head:'Bricolage Grotesque','Trebuchet MS',sans-serif;--body:'Figtree','Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0E1A15;--surface:#16261F;--sunk:#1D3128;--ink:#E4EFE8;--mute:#8FA89B;--line:#2A4237;
+  --water:#59B8DD;--water-soft:#173845;--leaf:#5CC27C;--leaf-soft:#1B3A26;--warn:#E5B04F;--warn-soft:#3B2F15;--bad:#EE7B73;--bad-soft:#40201E;--side:#091812;--side2:#17372A;color-scheme:dark}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.6 var(--body)}
+h1,h2,h3{font-family:var(--head);letter-spacing:-.01em;line-height:1.15}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+svg.i{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+svg.lf{fill:var(--leaf);flex:none}
+
+/* Menu latéral */
+.side{position:fixed;top:0;left:0;height:100vh;height:100dvh;width:var(--w);background:var(--side);color:#C9DED3;padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:30;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:thin;scrollbar-color:var(--side2) transparent;transition:width .28s,transform .28s}
+.side>*{flex:none}
+.side::-webkit-scrollbar{width:6px}.side::-webkit-scrollbar-thumb{background:var(--side2);border-radius:6px}
+body.open{overflow:hidden}
+@media (max-height:520px){.side{padding-top:12px;gap:4px}.logo{padding-bottom:10px}.nav{padding:10px 16px}.tank{margin-top:10px;padding:12px}}
+.logo{display:flex;align-items:center;gap:14px;color:#fff;font:800 24px var(--head);padding:4px 12px 28px;white-space:nowrap}
+.logo svg{stroke:#7BE0A6;width:28px;height:28px}
+.nav{display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:16px;text-align:left;white-space:nowrap;color:#C9DED3;position:relative}
+.nav:hover{background:var(--side2)}
+.nav[aria-current=page]{background:var(--surface);color:var(--side);font-weight:600}
+.badge{margin-left:auto;background:var(--bad);color:#fff;font-size:12px;border-radius:99px;padding:0 8px}
+.tank{margin-top:auto;min-height:max-content;background:var(--side2);border-radius:18px;padding:18px;white-space:nowrap;font-size:14px}
+.tank b{display:block;font:700 26px var(--head);color:#fff}
+.tank div{height:8px;background:rgba(255,255,255,.15);border-radius:8px;margin-top:10px;overflow:hidden}
+.tank div i{display:block;height:100%;background:#7BE0A6;border-radius:8px}
+.main{margin-left:var(--w);transition:margin .28s;min-height:100vh}
+body.collapsed{--w:92px}
+body.collapsed .lbl,body.collapsed .badge,body.collapsed .tank{display:none}
+body.collapsed .nav{justify-content:center;padding:14px 0}
+body.collapsed .logo{justify-content:center;padding:4px 0 28px}
+.scrim{display:none}
+.top{display:flex;align-items:center;gap:18px;padding:18px 36px;position:sticky;top:0;z-index:10;background:var(--bg)}
+.burger{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--surface)}
+.burger:hover{background:var(--sunk)}
+.top h1{font-size:22px;flex:1}
+.live{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mute)}
+.live i{width:10px;height:10px;border-radius:50%;background:var(--leaf);animation:p 2s infinite}
+@keyframes p{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.live i{animation:none}.side,.main{transition:none}}
+@media (max-width:900px){
+  .side{transform:translateX(-100%);width:270px}
+  .main{margin-left:0!important}
+  body.open .side{transform:none}
+  body.open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:25}
+  body.collapsed .lbl,body.collapsed .tank{display:revert}
+  body.collapsed .nav{justify-content:flex-start;padding:14px 16px}
+  body.collapsed .logo{justify-content:flex-start;padding:4px 12px 28px}
+  body.collapsed .badge{display:revert}
+  .top{padding:14px 18px}.live span{display:none}
+}
+
+/* Contenu */
+.wrap{max-width:960px;margin:0 auto;padding:16px 36px 72px}
+h2{font-size:34px;margin-bottom:8px}
+.sub{color:var(--mute);margin-bottom:36px;max-width:56ch}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:32px}
+.chip{border:1.5px solid var(--line);background:var(--surface);padding:9px 18px;border-radius:99px;font-weight:500}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.hero{position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr;gap:40px;align-items:center;background:var(--surface);border-radius:32px;padding:40px;margin-bottom:28px}
+.hero>*{position:relative}
+.hero .deco{position:absolute;right:-30px;bottom:-40px;width:230px;opacity:.13;fill:var(--leaf)}
+.hero h3{font-size:30px;margin:14px 0 10px}
+.hero p{color:var(--mute);margin-bottom:22px}
+.tag{display:inline-block;padding:5px 14px;border-radius:99px;font-size:14px;font-weight:600}
+.t-ok{background:var(--leaf-soft);color:var(--leaf)}.t-mid{background:var(--water-soft);color:var(--water)}.t-dry{background:var(--bad-soft);color:var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:40px}
+.stat{background:var(--surface);border-radius:24px;padding:26px}
+.stat span{color:var(--mute);font-size:14px}
+.stat b{display:block;font:700 34px var(--head);margin-top:6px}
+.bar{height:10px;background:var(--sunk);border-radius:9px;margin-top:14px;overflow:hidden}
+.bar div{height:100%;background:var(--water);border-radius:9px;transition:width .8s}
+.card{background:var(--surface);border-radius:24px;padding:28px;margin-bottom:20px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+.card h3{font-size:22px;margin-bottom:4px}
+.mute{color:var(--mute);font-size:15px}
+.btn{border-radius:99px;padding:13px 26px;font-weight:600;background:var(--water);color:#fff;display:inline-flex;align-items:center;gap:10px}
+.btn.stop{background:var(--bad)}.btn.ghost{background:var(--sunk);color:var(--ink)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}.btn.danger:hover{background:var(--bad);color:#fff}
+.btn.sm{padding:9px 18px;font-size:15px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn svg.i{width:18px;height:18px}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+input[type=range]{width:100%;accent-color:var(--water);margin:14px 0 4px}
+input[type=text],input[type=password]{width:100%;padding:13px 16px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:inherit}
+label,.lab{display:block;font-weight:600;margin:20px 0 8px}
+.list{display:grid;gap:24px}
+.item{display:flex;gap:14px;align-items:flex-start;padding:20px 22px;border-radius:20px;margin-bottom:14px}
+.item.warn{background:var(--warn-soft)}.item.bad{background:var(--bad-soft)}.item.info{background:var(--water-soft)}
+.item time{color:var(--mute);font-size:14px;white-space:nowrap}
+.item span{flex:1}
+.x{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--mute);flex:none}
+.x:hover{background:var(--bad);color:#fff}
+.x svg.i{width:18px;height:18px}
+.empty{padding:48px 24px;text-align:center;color:var(--mute);background:var(--surface);border-radius:24px}
+.empty svg{width:64px;margin-bottom:12px}
+.empty .btn{margin-top:18px}
+table{width:100%;border-collapse:collapse}
+td,th{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);font-size:15px}
+th{color:var(--mute);font-weight:500}
+.scroll{overflow-x:auto}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;background:var(--leaf)}
+.dot.off{background:var(--mute)}
+.count{font-size:15px;color:var(--mute)}
+
+/* Mode + critères */
+.fhead{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+.fhead svg.lf{width:44px;height:44px}
+.fhead .grow{flex:1}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+.mode{text-align:left;border:2px solid var(--line);border-radius:20px;padding:18px 20px;display:flex;gap:14px;align-items:flex-start;background:var(--bg)}
+.mode svg.i{width:30px;height:30px;margin-top:2px;color:var(--mute)}
+.mode b{display:block;font:700 18px var(--head)}
+.mode span{font-size:14px;color:var(--mute);line-height:1.4;display:block}
+.mode[aria-pressed=true]{border-color:var(--leaf);background:var(--leaf-soft)}
+.mode[aria-pressed=true] svg.i{color:var(--leaf)}
+.crit{border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.cr{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.cr:last-of-type{border-bottom:0}
+.mk{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;color:#fff}
+.mk.y{background:var(--leaf)}.mk.n{background:var(--bad)}.mk.off{background:var(--sunk);color:var(--mute)}
+.mk svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.cr div{flex:1}.cr b{font-weight:600}.cr small{display:block;color:var(--mute);font-size:14px}
+.sw{width:50px;height:28px;border-radius:99px;background:var(--sunk);position:relative;flex:none;border:1.5px solid var(--line)}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:var(--mute);transition:left .2s}
+.sw[aria-checked=true]{background:var(--leaf-soft);border-color:var(--leaf)}
+.sw[aria-checked=true]::after{left:24px;background:var(--leaf)}
+.verdict{display:flex;gap:14px;align-items:center;padding:16px 20px;border-radius:18px;margin:18px 0 6px;font-weight:600}
+.verdict.go{background:var(--leaf-soft);color:var(--leaf)}.verdict.no{background:var(--bad-soft);color:var(--bad)}
+.verdict .mk{width:30px;height:30px}
+
+/* Formulaire d’ajout */
+.form{border:2px dashed var(--line);background:transparent}
+.crops{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.crops .chip{padding:6px 14px;font-size:15px;margin:0}
+.seg{display:inline-flex;background:var(--sunk);border-radius:99px;padding:4px}
+.seg button{padding:8px 20px;border-radius:99px;font-weight:600;color:var(--mute)}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.zone{border:1.5px solid var(--bad);background:transparent}
+.zone h3{color:var(--bad)}
+
+/* Fenêtre de confirmation et message */
+dialog{border:0;border-radius:28px;padding:32px;max-width:420px;width:calc(100% - 40px);background:var(--surface);color:var(--ink);margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(8,20,14,.55)}
+dialog h3{font-size:24px;margin-bottom:10px}
+dialog p{color:var(--mute);margin-bottom:26px}
+dialog .actions{margin:0;justify-content:flex-end}
+#toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:12px 22px;border-radius:99px;font-weight:500;opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:90%}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:640px){.hero{grid-template-columns:1fr;padding:28px;justify-items:center;text-align:center}h2{font-size:28px}.wrap{padding:8px 18px 72px}.modes{grid-template-columns:1fr}}
+
+/* Connexion et création de compte */
+body.locked .side,body.locked .main{display:none}
+body.locked{overflow:hidden}
+.auth{position:fixed;inset:0;z-index:100;display:grid;grid-template-columns:1.05fr 1fr;background:var(--bg);overflow:auto}
+.auth[hidden]{display:none}
+.a-art{position:relative;overflow:hidden;background:linear-gradient(160deg,#0F3D2E 0%,#17513E 60%,#1B6B50 100%);color:#DDEFE6;padding:56px;display:flex;flex-direction:column;justify-content:center;gap:28px}
+.a-art .lf{position:absolute;fill:#7BE0A6;opacity:.13}
+.a-art>*:not(.lf){position:relative}
+.a-brand{display:flex;align-items:center;gap:14px;font:800 34px var(--head);color:#fff}
+.a-brand svg{stroke:#7BE0A6;width:40px;height:40px}
+.a-art h2{font-size:40px;color:#fff;max-width:14ch;margin:0}
+.a-art ul{list-style:none;padding:0;display:grid;gap:14px;max-width:34ch}
+.a-art li{display:flex;gap:12px;align-items:center}
+.a-art li .mk{width:28px;height:28px}
+.a-form{display:grid;place-items:center;padding:40px 24px}
+.a-box{width:100%;max-width:400px}
+.a-tabs{display:flex;background:var(--sunk);border-radius:99px;padding:4px;margin-bottom:28px}
+.a-tabs button{flex:1;padding:11px;border-radius:99px;font-weight:600;color:var(--mute)}
+.a-tabs button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.a-box h2{font-size:30px}
+.a-box .sub{margin-bottom:8px}
+.pinbox{position:relative}
+.pinbox input{padding-right:56px}
+.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--mute)}
+.eye:hover{background:var(--sunk);color:var(--ink)}
+.aerr{display:flex;gap:10px;align-items:center;background:var(--bad-soft);color:var(--bad);padding:12px 16px;border-radius:14px;margin-top:18px;font-weight:500;font-size:15px}
+.aerr .mk{width:24px;height:24px}.aerr .mk svg{width:13px;height:13px}
+.a-box .btn{width:100%;justify-content:center;margin-top:24px;padding:15px}
+.a-note{margin-top:22px;font-size:14px;color:var(--mute)}
+.acct{font-size:13px;color:#8fb3a2;padding:6px 16px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:860px){.auth{grid-template-columns:1fr}.a-art{padding:28px 24px;gap:12px}.a-art h2,.a-art ul{display:none}.a-brand{font-size:26px}}
+#toast{z-index:200}
+</style>
+</head>
+<body>
+<div id="auth" class="auth" hidden>
+  <section class="a-art">
+    <svg class="lf" width="320" height="320" style="right:-70px;top:-60px;transform:rotate(25deg)"><use href="#leaf"/></svg>
+    <svg class="lf" width="220" height="220" style="left:-50px;bottom:-40px;transform:rotate(-70deg)"><use href="#leaf"/></svg>
+    <div class="a-brand"><svg class="i" viewBox="0 0 24 24"><path d="M12 3c4 4 6 7 6 10a6 6 0 0 1-12 0c0-3 2-6 6-10z"/></svg>Flora</div>
+    <h2>Vos champs, même de loin.</h2>
+    <ul>
+      <li><span class="mk y"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Surveillez le sol en temps réel</li>
+      <li><span class="mk y"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Arrosez à distance ou en automatique</li>
+      <li><span class="mk y"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Recevez des alertes utiles</li>
+    </ul>
+  </section>
+  <section class="a-form"><div class="a-box" id="abox"></div></section>
+</div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="leaf" viewBox="0 0 64 64"><path d="M10 54C4 32 16 10 54 8c2 38-18 52-38 46z"/><path d="M12 52C24 38 34 28 46 18" fill="none" stroke="var(--surface)" stroke-width="2.5" stroke-linecap="round" opacity=".7"/></symbol>
+  <symbol id="sprout" viewBox="0 0 64 64"><path d="M32 58V30" fill="none" stroke="var(--leaf)" stroke-width="4" stroke-linecap="round"/><path d="M32 34C22 34 12 28 10 16c12-2 22 4 22 18z"/><path d="M32 28c0-12 8-18 22-18 0 12-8 20-22 18z"/></symbol>
+</svg>
+<aside class="side" id="side" aria-label="Menu principal"></aside>
+<div class="scrim" onclick="document.body.classList.remove('open')"></div>
+<div class="main">
+  <header class="top">
+    <button class="burger" onclick="toggleMenu()" aria-label="Ouvrir ou fermer le menu"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <h1 id="title">Tableau de bord</h1>
+    <div class="live"><i></i><span id="clock">En direct</span></div>
+  </header>
+  <main class="wrap" id="app"></main>
+</div>
+<dialog id="dlg" aria-labelledby="dt">
+  <h3 id="dt"></h3><p id="dp"></p>
+  <div class="actions"><button class="btn ghost" onclick="$('#dlg').close()">Annuler</button><button class="btn stop" id="dok"></button></div>
+</dialog>
+<div id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const now=()=>new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+let view='dashboard',sel=0,tank=78,rain=20,tankWarned=false,uid=4;
+const seed=m=>Array.from({length:40},(_,i)=>clamp(m+Math.sin(i/4)*6-(40-i)*.05,10,90));
+const crit0=()=>({soil:true,rain:true,heat:true,tank:true});
+const defaults=()=>[
+ {name:'Parcelle des haricots',crop:'Haricots',moist:52,thr:35,mode:'auto',crit:crit0(),pump:false,temp:24.6,hum:63,dev:'ESP32-A1',hist:seed(52)},
+ {name:'Champ de maïs',crop:'Maïs',moist:34,thr:30,mode:'manual',crit:crit0(),pump:false,temp:26.1,hum:58,dev:'ESP32-B2',hist:seed(34)},
+ {name:'Bananeraie',crop:'Bananiers',moist:68,thr:45,mode:'auto',crit:crit0(),pump:false,temp:23.8,hum:71,dev:'ESP32-C3',hist:seed(68)}];
+const fields=defaults(),alerts=[],log=[];
+const draft={name:'',crop:'Haricots',mode:'auto',thr:35};
+const addAlert=(k,m)=>{alerts.unshift({t:now(),k,m});if(alerts.length>60)alerts.pop()};
+addAlert('info','Système démarré. 3 parcelles connectées.');
+
+/* Messages et confirmations */
+let tt;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2600)}
+function ask(title,text,label,fn){
+  $('#dt').textContent=title;$('#dp').textContent=text;$('#dok').textContent=label;
+  $('#dok').onclick=()=>{$('#dlg').close();fn()};$('#dlg').showModal();
+}
+
+/* Critères de l’arrosage automatique */
+function checks(f){return[
+ {k:'soil',t:'Le sol est trop sec',ok:f.moist<f.thr,d:Math.round(f.moist)+' % mesurés, seuil à '+f.thr+' %',no:'Sol assez humide : arrosage inutile'},
+ {k:'rain',t:'Aucune pluie prévue',ok:rain<50,d:'Risque de pluie : '+Math.round(rain)+' %',no:'Pluie probable : la nature arrose pour vous'},
+ {k:'heat',t:'Chaleur acceptable',ok:f.temp<30,d:'Température : '+f.temp.toFixed(1)+' °C (limite 30 °C)',no:'Trop chaud : l’eau s’évaporerait'},
+ {k:'tank',t:'Réservoir suffisant',ok:tank>10,d:'Niveau : '+Math.round(tank)+' % (minimum 10 %)',no:'Réservoir presque vide'}]}
+function verdict(f){const bad=checks(f).filter(c=>f.crit[c.k]&&!c.ok);return{go:bad.length===0,bad}}
+function setPump(f,on,why){
+  if(on&&tank<=3){addAlert('bad','Réservoir vide : impossible d’arroser '+f.name+'.');return}
+  if(f.pump===on)return;f.pump=on;
+  log.unshift({t:now(),f:f.name,a:on?'Arrosage démarré':'Arrosage arrêté',w:why});
+  if(log.length>200)log.pop();
+}
+function tick(){
+  if(!user)return;
+  rain=clamp(rain+(Math.random()-.5)*9,5,95);
+  fields.forEach(f=>{
+    if(f.mode==='auto'){
+      const v=verdict(f);
+      if(!f.pump&&v.go)setPump(f,true,'Automatique : critères réunis');
+      if(f.pump){
+        const sb=v.bad.filter(c=>c.k!=='soil');
+        if(sb.length)setPump(f,false,'Automatique : '+sb[0].no.toLowerCase());
+        else if(f.moist>=f.thr+18)setPump(f,false,'Automatique : sol assez humide');
+      }
+    }
+    if(f.pump&&tank<=3)setPump(f,false,'Réservoir vide');
+    f.moist=clamp(f.moist+(f.pump?1.6:-(.25+Math.random()*.35)),5,95);
+    f.temp+=(Math.random()-.5)*.3;f.hum=clamp(f.hum+(Math.random()-.5)*1.2,30,90);
+    if(f.pump)tank=Math.max(0,tank-.35);
+    f.hist.push(f.moist);if(f.hist.length>60)f.hist.shift();
+    if(f.moist<f.thr-6&&!f.warned){addAlert('warn',f.name+' : le sol est trop sec ('+Math.round(f.moist)+' %).');f.warned=true}
+    if(f.moist>=f.thr)f.warned=false;
+  });
+  if(tank<20&&!tankWarned){addAlert('bad','Le niveau du réservoir est bas ('+Math.round(tank)+' %).');tankWarned=true}
+  if(tank>=20)tankWarned=false;
+  $('#clock').textContent='Mis à jour à '+now();
+  if(document.activeElement&&document.activeElement.tagName==='INPUT')return;
+  render();
+}
+const status=f=>f.moist<f.thr?['t-dry','Sol sec']:f.moist<f.thr+18?['t-ok','Humidité correcte']:['t-mid','Sol bien humide'];
+
+/* Dessins */
+const sprout=s=>`<svg class="lf" width="${s}" height="${s}" aria-hidden="true"><use href="#sprout"/></svg>`;
+const leaf=s=>`<svg class="lf" width="${s}" height="${s}" aria-hidden="true"><use href="#leaf"/></svg>`;
+const yes='<span class="mk y"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
+const no='<span class="mk n"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span>';
+const off='<span class="mk off"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></span>';
+const trash='<svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+const redo='<svg class="i" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v5h5"/></svg>';
+const xbtn=(fn,label)=>`<button class="x" onclick="${fn}" aria-label="${label}" title="${label}"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+function gauge(f,s){
+  const C=2*Math.PI*54,o=C*(1-f.moist/100),col=f.moist<f.thr?'var(--bad)':'var(--water)';
+  return `<svg width="${s}" height="${s}" viewBox="0 0 130 130" role="img" aria-label="Humidité du sol ${Math.round(f.moist)} pour cent">
+  <circle cx="65" cy="65" r="54" fill="none" stroke="var(--sunk)" stroke-width="14"/>
+  <circle cx="65" cy="65" r="54" fill="none" stroke="${col}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${o}" transform="rotate(-90 65 65)" style="transition:stroke-dashoffset .8s"/>
+  <text x="65" y="70" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-weight="800" font-size="30" fill="var(--ink)">${Math.round(f.moist)}%</text>
+  <text x="65" y="90" text-anchor="middle" font-size="10" fill="var(--mute)">humidité du sol</text></svg>`;
+}
+function chart(f){
+  const W=640,H=220,p=28,h=f.hist,x=i=>p+i*(W-2*p)/Math.max(1,h.length-1),y=v=>H-p-(v/100)*(H-2*p);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Courbe d’humidité de ${f.name}">
+  ${[0,25,50,75,100].map(v=>`<line x1="${p}" x2="${W-p}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="2" y="${y(v)+4}" font-size="11" fill="var(--mute)">${v}</text>`).join('')}
+  <line x1="${p}" x2="${W-p}" y1="${y(f.thr)}" y2="${y(f.thr)}" stroke="var(--warn)" stroke-width="2" stroke-dasharray="6 6"/>
+  <polyline points="${h.map((v,i)=>x(i)+','+y(v)).join(' ')}" fill="none" stroke="var(--water)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+const cur=()=>fields[sel]||fields[0];
+const chips=()=>`<div class="chips">${fields.map((f,i)=>`<button class="chip" aria-pressed="${i===sel}" onclick="sel=${i};render()">${f.name}</button>`).join('')}</div>`;
+const emptyBox=(t,btn)=>`<div class="empty"><svg class="lf" viewBox="0 0 64 64"><use href="#sprout"/></svg><p>${t}</p>${btn||''}</div>`;
+const noField=()=>emptyBox('Aucune parcelle pour le moment.','<button class="btn" onclick="go(\'devices\')">Ajouter une parcelle</button>');
+
+const views={
+dashboard(){
+  if(!fields.length)return noField();
+  const f=cur(),s=status(f),v=verdict(f);
+  const auto=f.mode==='auto'?(f.pump?'Arrosage automatique en cours.':v.go?'Les critères sont réunis : l’arrosage va démarrer.':'Pas d’arrosage pour l’instant : '+v.bad[0].no.toLowerCase()+'.'):'Mode manuel : vous décidez.';
+  return `<h2>Bonjour, voici vos cultures</h2><p class="sub">Un coup d’œil à l’état de vos parcelles. Les mesures se mettent à jour toutes les deux secondes.</p>${chips()}
+  <section class="hero"><svg class="deco" viewBox="0 0 64 64" aria-hidden="true"><use href="#leaf"/></svg>${gauge(f,200)}<div><span class="tag ${s[0]}">${s[1]}</span>
+  <h3>${f.name}</h3>
+  <p>${f.crop} · seuil à ${f.thr} %. ${auto}</p>
+  <button class="btn ${f.pump?'stop':''}" onclick="toggle(${sel})">${f.pump?'Arrêter l’arrosage':'Arroser maintenant'}</button></div></section>
+  <div class="grid">
+   <div class="stat"><span>Température</span><b>${f.temp.toFixed(1)} °C</b></div>
+   <div class="stat"><span>Humidité de l’air</span><b>${Math.round(f.hum)} %</b></div>
+   <div class="stat"><span>Risque de pluie</span><b>${Math.round(rain)} %</b><div class="bar"><div style="width:${rain}%"></div></div></div>
+   <div class="stat"><span>Pompes actives</span><b>${fields.filter(x=>x.pump).length} / ${fields.length}</b></div></div>
+  <h3 style="margin-bottom:18px;font-size:24px">Toutes les parcelles</h3>
+  <div class="list">${fields.map(x=>{const t=status(x);return `<div class="card row" style="margin:0"><div class="fhead" style="margin:0">${sprout(40)}<div><h3>${x.name}</h3><span class="mute">${x.crop} · ${x.mode==='auto'?'Automatique':'Manuel'}</span></div></div><span class="tag ${t[0]}">${Math.round(x.moist)} % · ${t[1]}</span></div>`}).join('')}</div>`;
+},
+live(){
+  if(!fields.length)return noField();
+  const f=cur();
+  return `<h2>Surveillance en direct</h2><p class="sub">Les valeurs envoyées par les capteurs de la parcelle choisie, et la courbe des dernières minutes.</p>${chips()}
+  <div class="grid">
+   <div class="stat"><span>Humidité du sol</span><b>${f.moist.toFixed(1)} %</b></div>
+   <div class="stat"><span>Température ambiante</span><b>${f.temp.toFixed(1)} °C</b></div>
+   <div class="stat"><span>Humidité de l’air</span><b>${f.hum.toFixed(0)} %</b></div>
+   <div class="stat"><span>Niveau du réservoir</span><b>${tank.toFixed(0)} %</b><div class="bar"><div style="width:${tank}%"></div></div></div></div>
+  <div class="card"><div class="row"><div><h3>Humidité du sol</h3><p class="mute">La ligne pointillée marque le seuil d’arrosage.</p></div>
+  <button class="btn ghost sm" onclick="clearCurve(${sel})">${redo}Réinitialiser la courbe</button></div><div style="margin-top:18px">${chart(f)}</div></div>`;
+},
+irrigation(){
+  if(!fields.length)return noField();
+  return `<h2>Contrôle de l’irrigation</h2><p class="sub">Pour chaque parcelle, choisissez d’arroser vous-même ou de laisser le système décider selon des critères que vous gardez sous contrôle.</p>
+  <div class="list">${fields.map((f,i)=>{
+    const c=checks(f),v=verdict(f),a=f.mode==='auto';
+    return `<div class="card" style="margin:0">
+   <div class="fhead">${sprout(44)}<div class="grow"><h3>${f.name}</h3><span class="mute">Humidité actuelle : ${Math.round(f.moist)} %</span></div>
+    ${xbtn(`delField(${i})`,'Supprimer la parcelle '+f.name)}</div>
+   <div class="modes" role="group" aria-label="Mode d’irrigation">
+    <button class="mode" aria-pressed="${!a}" onclick="mode(${i},'manual')"><svg class="i" viewBox="0 0 24 24"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v8c0 4-2 6-5 6s-4-2-6-5l-1-2a1.5 1.5 0 0 1 3-1l1 1.5"/></svg><div><b>Manuel</b><span>Vous démarrez et arrêtez la pompe quand vous le décidez.</span></div></button>
+    <button class="mode" aria-pressed="${a}" onclick="mode(${i},'auto')"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2M17 3v4h4"/></svg><div><b>Automatique</b><span>Le système arrose seulement si les critères choisis sont réunis.</span></div></button>
+   </div>
+   ${a?`<div class="crit"><h3 style="margin:14px 0 4px;font-size:18px">Critères de décision</h3>
+    <p class="mute">Désactivez un critère pour qu’il soit ignoré.</p>
+    ${c.map(x=>`<div class="cr">${!f.crit[x.k]?off:x.ok?yes:no}<div><b>${x.t}</b><small>${x.d}</small></div>
+     <button class="sw" role="switch" aria-checked="${f.crit[x.k]}" aria-label="${x.t}" onclick="crit(${i},'${x.k}')"></button></div>`).join('')}
+    <div class="verdict ${v.go?'go':'no'}">${v.go?yes:no}<span>${f.pump?'Arrosage en cours.':v.go?'Tous les critères sont réunis : arrosage.':'Pas d’arrosage : '+v.bad[0].no.toLowerCase()+'.'}</span></div></div>`:''}
+   <label for="r${i}">Seuil d’humidité : <b id="v${i}">${f.thr} %</b></label>
+   <input id="r${i}" type="range" min="10" max="70" value="${f.thr}" oninput="fields[${i}].thr=+this.value;$('#v${i}').textContent=this.value+' %'">
+   <div class="actions"><button class="btn ${f.pump?'stop':''}" ${a?'disabled':''} onclick="toggle(${i})">${f.pump?'Arrêter la pompe':'Démarrer la pompe'}</button>
+    <button class="btn ghost" onclick="resetField(${i})">${redo}Réinitialiser</button>
+    <button class="btn danger" onclick="delField(${i})">${trash}Supprimer</button></div></div>`}).join('')}</div>`;
+},
+history(){
+  const f=cur();
+  return `<h2>Historique</h2><p class="sub">Les derniers arrosages, qu’ils soient lancés par vous ou par le système.</p>
+  ${log.length?`<div class="card"><div class="row"><span class="count">${log.length} enregistrement${log.length>1?'s':''}</span>
+   <button class="btn danger sm" onclick="clearLog()">${trash}Supprimer tout l’historique</button></div>
+   <div class="scroll" style="margin-top:12px"><table><tr><th>Heure</th><th>Parcelle</th><th>Action</th><th>Origine</th><th></th></tr>${log.map((l,i)=>`<tr><td>${l.t}</td><td>${l.f}</td><td>${l.a}</td><td>${l.w}</td><td>${xbtn(`delLog(${i})`,'Supprimer cette ligne')}</td></tr>`).join('')}</table></div></div>`:emptyBox('Aucun arrosage enregistré. Lancez la pompe depuis l’onglet Irrigation.')}`;
+},
+alerts(){
+  return `<h2>Alertes</h2><p class="sub">Sol trop sec, réservoir bas : tout ce qui demande votre attention.</p>
+  ${alerts.length?`<div class="row" style="margin-bottom:18px"><span class="count">${alerts.length} alerte${alerts.length>1?'s':''}</span><button class="btn danger sm" onclick="clearAlerts()">${trash}Tout effacer</button></div>
+  ${alerts.map((a,i)=>`<div class="item ${a.k}"><time>${a.t}</time><span>${a.m}</span>${xbtn(`delAlert(${i})`,'Supprimer cette alerte')}</div>`).join('')}`:emptyBox('Aucune alerte. Tout va bien.')}`;
+},
+devices(){
+  const crops=['Haricots','Maïs','Bananiers','Manioc','Café','Riz'];
+  return `<h2>Parcelles et appareils</h2><p class="sub">Ajoutez, modifiez ou supprimez vos parcelles.</p>
+  ${fields.length?`<div class="card scroll"><table><tr><th>Appareil</th><th>Parcelle</th><th>Culture</th><th>État</th><th></th></tr>${fields.map((f,i)=>`<tr><td>${f.dev}</td><td>${f.name}</td><td>${f.crop}</td><td><span class="dot ${f.pump?'':'off'}"></span>${f.pump?'Pompe active':'En veille'}</td><td>${xbtn(`delField(${i})`,'Supprimer '+f.name)}</td></tr>`).join('')}</table></div>`:noField()}
+  <div class="card form"><div class="fhead">${leaf(40)}<div><h3>Nouvelle parcelle</h3><span class="mute">Renseignez l’essentiel, le reste se règle ensuite.</span></div></div>
+   <label for="nn" style="margin-top:0">Nom de la parcelle</label><input id="nn" type="text" placeholder="Ex. Champ de manioc" value="${draft.name.replace(/"/g,'&quot;')}" oninput="draft.name=this.value">
+   <div class="lab">Culture</div><input id="nc" type="text" aria-label="Culture" value="${draft.crop.replace(/"/g,'&quot;')}" oninput="draft.crop=this.value">
+   <div class="crops">${crops.map(c=>`<button class="chip" aria-pressed="${draft.crop===c}" onclick="draft.crop='${c}';render()">${c}</button>`).join('')}</div>
+   <div class="lab">Mode de départ</div>
+   <div class="seg" role="group" aria-label="Mode de départ"><button aria-pressed="${draft.mode==='auto'}" onclick="draft.mode='auto';render()">Automatique</button><button aria-pressed="${draft.mode==='manual'}" onclick="draft.mode='manual';render()">Manuel</button></div>
+   <label for="nt">Seuil d’humidité : <b id="nv">${draft.thr} %</b></label>
+   <input id="nt" type="range" min="10" max="70" value="${draft.thr}" oninput="draft.thr=+this.value;$('#nv').textContent=this.value+' %'">
+   <div class="actions"><button class="btn" onclick="addField()">Ajouter la parcelle</button><button class="btn ghost" onclick="clearDraft()">${redo}Vider le formulaire</button></div></div>
+  <div class="card zone"><h3>Réinitialisation</h3><p class="mute" style="margin-bottom:6px">Ces actions demandent une confirmation.</p>
+   <div class="actions"><button class="btn ghost" onclick="tank=100;addAlert('info','Réservoir rempli à 100 %.');toast('Réservoir rempli');render()">Remplir le réservoir</button>
+   <button class="btn danger" onclick="resetAll()">${redo}Tout réinitialiser</button>
+   <button class="btn danger" onclick="delAccount()">${trash}Supprimer mon compte</button></div></div>`;
+}};
+
+/* Actions */
+function go(v){view=v;document.body.classList.remove('open');render();scrollTo(0,0)}
+function toggle(i){const f=fields[i];setPump(f,!f.pump,'Manuel');render()}
+function mode(i,m){fields[i].mode=m;render()}
+function crit(i,k){fields[i].crit[k]=!fields[i].crit[k];render()}
+function clearCurve(i){const f=fields[i];f.hist=[f.moist];toast('Courbe réinitialisée');render()}
+function resetField(i){
+  const f=fields[i];
+  ask('Réinitialiser « '+f.name+' » ?','Le seuil, le mode, les critères et la courbe reviennent à leurs valeurs de départ.','Réinitialiser',()=>{
+    f.thr=35;f.mode='auto';f.crit=crit0();f.hist=[f.moist];setPump(f,false,'Réinitialisation');toast('Parcelle réinitialisée');render()});
+}
+function delField(i){
+  const f=fields[i];
+  ask('Supprimer « '+f.name+' » ?','La parcelle, ses réglages et sa courbe seront supprimés. Cette action est définitive.','Supprimer',()=>{
+    fields.splice(i,1);sel=clamp(sel,0,Math.max(0,fields.length-1));addAlert('info','Parcelle « '+f.name+' » supprimée.');toast('Parcelle supprimée');render()});
+}
+function delLog(i){log.splice(i,1);toast('Ligne supprimée');render()}
+function clearLog(){ask('Supprimer tout l’historique ?','Les '+log.length+' enregistrements d’arrosage seront effacés. Cette action est définitive.','Tout supprimer',()=>{log.length=0;toast('Historique supprimé');render()})}
+function delAlert(i){alerts.splice(i,1);render()}
+function clearAlerts(){ask('Effacer toutes les alertes ?','Les '+alerts.length+' alertes seront supprimées.','Tout effacer',()=>{alerts.length=0;toast('Alertes effacées');render()})}
+function clearDraft(){Object.assign(draft,{name:'',crop:'Haricots',mode:'auto',thr:35});toast('Formulaire vidé');render()}
+function addField(){
+  const n=draft.name.trim();
+  if(!n){toast('Donnez un nom à la parcelle.');$('#nn').focus();return}
+  fields.push({name:n,crop:draft.crop.trim()||'Culture non précisée',moist:50,thr:draft.thr,mode:draft.mode,crit:crit0(),pump:false,temp:24,hum:60,dev:'ESP32-D'+uid++,hist:seed(50)});
+  addAlert('info','Parcelle « '+n+' » ajoutée.');toast('Parcelle ajoutée');
+  Object.assign(draft,{name:'',crop:'Haricots',mode:'auto',thr:35});render();
+}
+function resetAll(){
+  ask('Tout réinitialiser ?','Les parcelles, l’historique, les alertes et le réservoir reviennent à l’état de départ. Vos parcelles ajoutées seront supprimées.','Tout réinitialiser',()=>{
+    fields.length=0;fields.push(...defaults());log.length=0;alerts.length=0;tank=78;rain=20;sel=0;uid=4;
+    addAlert('info','Système réinitialisé.');toast('Système réinitialisé');render()});
+}
+
+/* Menu et affichage */
+const ic={
+ dashboard:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',
+ live:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+ irrigation:'<path d="M12 3c4 4 6 7 6 10a6 6 0 0 1-12 0c0-3 2-6 6-10z"/>',
+ history:'<path d="M4 20V4M4 20h16M8 16l4-5 3 3 5-7"/>',
+ alerts:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/>',
+ devices:'<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>'
+};
+const tabs=[['dashboard','Tableau de bord'],['live','Surveillance'],['irrigation','Irrigation'],['history','Historique'],['alerts','Alertes'],['devices','Parcelles']];
+const svg=p=>`<svg class="i" viewBox="0 0 24 24">${p}</svg>`;
+function toggleMenu(){
+  if(innerWidth<=900)document.body.classList.toggle('open');
+  else document.body.classList.toggle('collapsed');
+}
+function render(){
+  const y=scrollY;
+  $('#title').textContent=tabs.find(t=>t[0]===view)[1];
+  $('#app').innerHTML=views[view]();
+  $('#side').innerHTML=`<div class="logo">${svg(ic.irrigation)}<span class="lbl">Flora</span></div>`+
+    tabs.map(t=>`<button class="nav" ${t[0]===view?'aria-current="page"':''} title="${t[1]}" onclick="go('${t[0]}')">${svg(ic[t[0]])}<span class="lbl">${t[1]}</span>${t[0]==='alerts'&&alerts.length?`<span class="badge">${Math.min(alerts.length,9)}</span>`:''}</button>`).join('')+
+    `<div class="tank"><span>Réservoir</span><b>${Math.round(tank)} %</b><div><i style="width:${tank}%"></i></div></div>`;
+  if(user)$('#side').insertAdjacentHTML('beforeend',`<div class="acct lbl" title="${user}">${user}</div><button class="nav" onclick="logout()" title="Se déconnecter">${svg('<path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>')}<span class="lbl">Se déconnecter</span></button>`);
+  scrollTo(0,y);
+}
+
+/* Comptes : stockage local sur cet appareil */
+const mem={};
+const store={
+  get(k){try{return localStorage.getItem(k)}catch(e){return mem[k]??null}},
+  set(k,v){try{localStorage.setItem(k,v)}catch(e){mem[k]=v}},
+  del(k){try{localStorage.removeItem(k)}catch(e){delete mem[k]}}
+};
+const getUsers=()=>{try{return JSON.parse(store.get('ubu_users')||'{}')}catch(e){return{}}};
+const saveUsers=u=>store.set('ubu_users',JSON.stringify(u));
+async function hashPin(email,pin){
+  const t='ubuhinzi:'+email+':'+pin;
+  try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+  catch(e){let h=5381;for(const c of t)h=((h<<5)+h+c.charCodeAt(0))|0;return'f'+h}
+}
+let user=null,amode='login',aemail='',aerr='',showPin=false,fails=0,lockUntil=0;
+const eye='<svg class="i" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+function authView(on){
+  document.body.classList.toggle('locked',on);$('#auth').hidden=!on;
+  if(on)drawAuth();
+}
+function drawAuth(){
+  const su=amode==='signup';
+  $('#abox').innerHTML=`<div class="a-tabs" role="group" aria-label="Choix">
+   <button aria-pressed="${!su}" onclick="setAuth('login')">Connexion</button>
+   <button aria-pressed="${su}" onclick="setAuth('signup')">Créer un compte</button></div>
+  <h2>${su?'Créez votre compte':'Bon retour'}</h2>
+  <p class="sub">${su?'Une adresse email et un code à 4 chiffres suffisent.':'Entrez votre email et votre code à 4 chiffres.'}</p>
+  <div id="af" onkeydown="if(event.key==='Enter'&&event.target.tagName==='INPUT')submitAuth()">
+   <label for="ae">Adresse email</label>
+   <input id="ae" type="text" inputmode="email" autocomplete="email" autocapitalize="none" placeholder="vous@exemple.com" value="${aemail.replace(/"/g,'&quot;')}">
+   <label for="p1">Code à 4 chiffres</label>
+   <div class="pinbox"><input id="p1" type="${showPin?'text':'password'}" inputmode="numeric" maxlength="4" autocomplete="${su?'new-password':'current-password'}" placeholder="4 chiffres" oninput="this.value=this.value.replace(/\\D/g,'')"><button type="button" class="eye" onclick="togglePin()" aria-label="Afficher ou masquer le code">${eye}</button></div>
+   ${su?`<label for="p2">Confirmez le code</label><div class="pinbox"><input id="p2" type="${showPin?'text':'password'}" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="4 chiffres" oninput="this.value=this.value.replace(/\\D/g,'')"></div>`:''}
+   <div id="aerrbox">${aerr?`<div class="aerr" role="alert">${no}<span>${aerr}</span></div>`:''}</div>
+   <button class="btn" type="button" onclick="submitAuth()">${su?'Créer mon compte':'Me connecter'}</button>
+  </div>
+  <p class="a-note">${su?'Votre compte est enregistré sur cet appareil. Le code est stocké sous forme chiffrée.':'Pas encore de compte ? Choisissez « Créer un compte ».'}</p>`;
+}
+const togglePin=()=>{showPin=!showPin;['p1','p2'].forEach(id=>{const e=$('#'+id);if(e)e.type=showPin?'text':'password'})};
+function showErr(m){aerr=m;const b=$('#aerrbox');if(b)b.innerHTML=m?`<div class="aerr" role="alert">${no}<span>${m}</span></div>`:''}
+function setAuth(m){amode=m;aerr='';drawAuth()}
+async function submitAuth(){
+  try{await submitCore()}catch(err){showErr('Une erreur est survenue : '+(err&&err.message?err.message:'réessayez')+'.')}
+}
+async function submitCore(){
+  const email=$('#ae').value.trim().toLowerCase(),pin=$('#p1').value,conf=$('#p2')?$('#p2').value:null;
+  aemail=email;
+  const fail=m=>{showErr(m);$('#p1').focus()};
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){showErr('Entrez une adresse email valide.');$('#ae').focus();return}
+  if(!/^\d{4}$/.test(pin))return fail('Le code doit contenir exactement 4 chiffres.');
+  const users=getUsers();
+  if(amode==='signup'){
+    if(users[email])return fail('Un compte existe déjà avec cet email. Connectez-vous.');
+    if(pin!==conf)return fail('Les deux codes ne sont pas identiques.');
+    users[email]=await hashPin(email,pin);saveUsers(users);
+    aerr='';return startSession(email,true);
+  }
+  if(Date.now()<lockUntil)return fail('Trop d’essais. Réessayez dans '+Math.ceil((lockUntil-Date.now())/1000)+' secondes.');
+  if(!users[email])return fail('Aucun compte avec cet email. Créez-en un.');
+  if(users[email]!==await hashPin(email,pin)){
+    if(++fails>=5){fails=0;lockUntil=Date.now()+30000;return fail('Trop d’essais. Réessayez dans 30 secondes.')}
+    return fail('Code incorrect. Il vous reste '+(5-fails)+' essai'+(5-fails>1?'s':'')+'.');
+  }
+  fails=0;aerr='';startSession(email,false);
+}
+function startSession(email,first){
+  user=email;store.set('ubu_session',email);aerr='';
+  authView(false);
+  addAlert('info',(first?'Compte créé. Bienvenue ':'Connexion réussie : ')+email+'.');
+  render();scrollTo(0,0);toast(first?'Compte créé, bienvenue !':'Bienvenue !');
+}
+function logout(){
+  user=null;store.del('ubu_session');document.body.classList.remove('open');
+  amode='login';aerr='';authView(true);
+}
+function delAccount(){
+  ask('Supprimer mon compte ?','Votre compte sera supprimé de cet appareil et vous serez déconnecté. Cette action est définitive.','Supprimer',()=>{
+    const u=getUsers();delete u[user];saveUsers(u);
+    aemail='';logout();
+  });
+}
+
+const savedUser=store.get('ubu_session');
+if(savedUser&&getUsers()[savedUser]){user=savedUser;render();authView(false)}
+else{authView(true)}
+setInterval(tick,2000);
+</script>
+</body>
+</html>
